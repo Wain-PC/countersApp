@@ -69,7 +69,7 @@ Meteor.methods({
         tomorrowDate.setDate(tomorrowDate.getDate() + 1);
         thenDate = existingRow.createdAt;
         if (+tomorrowDate > +thenDate) {
-            var updateObj = [{month: doc.month, year: doc.year}, {
+            var updateObj = [{userId: doc.userId, month: doc.month, year: doc.year}, {
                 $set: {
                     coldwater1: doc.coldwater1,
                     coldwater2: doc.coldwater2,
@@ -112,7 +112,7 @@ Meteor.methods({
 
     'checkExistingRow': function (doc) {
         check(doc, Schemas.Row);
-        return Rows.findOne({month: doc.month, year: doc.year});
+        return Rows.findOne({userId: doc.userId, month: doc.month, year: doc.year});
     },
 
     'rowsList': function () {

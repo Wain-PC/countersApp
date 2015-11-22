@@ -4,6 +4,7 @@
             {{#autoForm collection="Rows" id="editRowForm" type="method"  meteormethod="rowEdit" doc=this}}
                 <fieldset>
                     <legend>Изменение показаний за {{getMonthYear}}</legend>
+                    {{> afQuickField name='userId' type='hidden'}}
                     {{> afQuickField name='month' type='hidden'}}
                     {{> afQuickField name='year'  type='hidden'}}
                     {{> afQuickField name='coldwater1'}}
