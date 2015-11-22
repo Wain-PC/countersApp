@@ -1,19 +1,5 @@
-<template name="rowItem">
-    <tr>
-        <td>{{getMonthCaption month}}</td>
-        <td>{{year}}</td>
-        <td>{{coldwater1}}</td>
-        <td>{{coldwater2}}</td>
-        <td>{{hotwater1}}</td>
-        <td>{{hotwater2}}</td>
-        <td>{{electricity}}</td>
-        <td>{{>rowItemCheckbox}}</td>
-        <td>{{comment}}</td>
-    </tr>
-</template>
-
 <template name="rowItemCheckbox">
-    <div class="checkbox" style="margin: 0;">
+    <div class="checkbox">
         <label>
             <input type="checkbox" disabled="disabled" checked="{{electricity_direct}}">
             <span class="checkbox-material">
@@ -21,4 +7,10 @@
             </span>
         </label>
     </div>
+</template>
+
+
+
+<template name="rowItemPeriod">
+    <a href="{{pathFor 'rows.edit'}}">{{getMonthCaption month}} {{year}}</a>
 </template>

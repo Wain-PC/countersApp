@@ -1,1 +1,0 @@
-console.log("Rows on server: %s", Rows.find().count());
