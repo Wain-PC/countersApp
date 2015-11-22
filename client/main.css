@@ -1,0 +1,7 @@
+ul.notifications {
+    position: fixed;
+}
+
+.checkbox .checkbox-material:before {
+    top:0;
+}
