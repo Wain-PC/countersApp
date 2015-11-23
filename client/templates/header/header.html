@@ -16,6 +16,9 @@
                         <a href="{{pathFor 'rows.add'}}">Добавить показания</a>
                     </li>
                 {{/if}}
+                {{#if isInRole 'admin'}}
+                    {{> admin_navigation}}
+                {{/if}}
             </ul>
             <ul class="nav navbar-nav navbar-right yoba">
                 {{> loginButtons}}
