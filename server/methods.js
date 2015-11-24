@@ -117,6 +117,72 @@ Meteor.methods({
 
     'rowsList': function () {
         return Rows.find({userId: this.userId});
+    },
+
+    'adm_checkMail': function() {
+        return Async.runSync(function (done) {
+            //do all async stuff
+            Mail.imap.once('ready', function() {
+                Mail.imap.openBox('ПОКАЗАНИЯ СЧЕТЧИКОВ', true, function(err, box) {
+                    var mailCounter = 0;
+                    if (err) throw err;
+                    console.log(box);
+
+                    var f = Mail.imap.seq.fetch(box.messages.total + ':*', {
+                        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
+                        struct: true
+                    });
+
+                    f.on('message', function(msg, seqno) {
+                        var prefix = '(#' + seqno + ') ';
+                        console.log(prefix);
+                        msg.on('body', function(stream, info) {
+                            var buffer = '';
+                            stream.on('data', function(chunk) {
+                                buffer += chunk.toString('utf8');
+                            });
+                            stream.once('end', function() {
+                                var message = Mail.Imap.parseHeader(buffer);
+                                var messageString = Mail.inspect(Mail.Imap.parseHeader(buffer));
+                                console.log('-------------------------');
+                                console.log(prefix);
+                                console.log(messageString);
+                                mailCounter++;
+
+                            });
+                        });
+                        msg.once('attributes', function(attrs) {
+                            //console.log(prefix + 'Attributes: %s', Mail.inspect(attrs, false, 8));
+                        });
+                        msg.once('end', function() {
+                            console.log(prefix + 'Parsed');
+                        });
+                    });
+                    f.once('error', function(err) {
+                        var result = -1;
+                        console.log('Fetch error: ' + err);
+                        if(done) {
+                            done(err,result)
+                        }
+                    });
+                    f.once('end', function() {
+                        console.log('Done fetching all messages!');
+                        Mail.imap.end();
+                        if(done) {
+                            done(null,mailCounter);
+                        }
+                    });
+
+                });
+            });
+            Mail.imap.once('error', function(err) {
+                console.log(err);
+            });
+            Mail.imap.once('end', function() {
+                console.log('Connection ended');
+            });
+            Mail.imap.connect();
+        });
     }
 });
 
