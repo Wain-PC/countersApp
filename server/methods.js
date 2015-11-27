@@ -119,6 +119,47 @@ Meteor.methods({
         return Rows.find({userId: this.userId});
     },
 
+    passwordGenerate: function () {
+        var generatePassword = Meteor.npmRequire('password-generator');
+        var pass = generatePassword();
+        console.log(pass);
+        return pass;
+    },
+
+    'adm_userAdd': function (doc) {
+        //добавление пользователей доступно только администратору
+        check(doc, Schemas.addUser);
+        if (!Roles.userIsInRole(this.userId, ['admin'])) {
+            notifyClient({
+                type: 'error',
+                title: 'Ошибка доступа!',
+                message: 'Для добавления пользователей нужны права администратора.'
+            });
+        }
+
+        result = Accounts.createUser({
+            email: doc.email,
+            password: doc.password,
+            flatNumber: doc.flatNumber
+        });
+        console.log("User creation result: %s", result);
+        if(!result) {
+            notifyClient({
+                type: 'error',
+                title: 'Ошибка создания пользователя!',
+                message: error
+            });
+        }
+        else {
+            notifyClient({
+                type: 'success',
+                title: 'Пользователь ' + doc.email + ' создан успешно'
+            });
+        }
+
+
+    },
+
     'adm_checkMail': function() {
         return Async.runSync(function (done) {
             //do all async stuff

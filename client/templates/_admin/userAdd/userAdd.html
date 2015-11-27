@@ -1,11 +1,14 @@
 ﻿<template name="adminUseradd">
     <div class="row">
         <div class="col-sm-6 col-md-4 col-md-offset-4">
-            {{#autoForm schema=userAddSchema id="adminUseraddForm" type="method"  meteormethod="userAdd"}}
+            {{#autoForm schema=userAddSchema id="adminUseraddForm" type="method"  meteormethod="adm_userAdd"}}
                 <fieldset>
                     <legend>Добавление нового пользователя</legend>
                     {{> afQuickField name='email' type='email' label="E-mail" required="true"}}
                     {{> afQuickField name='password' type='text' label="Пароль" required="true"}}
+                    <button id="passwordGenerate">Сгенерировать</button>
+                    {{> afQuickField name='flatNumber' type='text'}}
+                    {{> afQuickField name='isAdmin'}}
                 </fieldset>
                 <button type="submit" class="btn btn-primary">Создать</button>
             {{/autoForm}}

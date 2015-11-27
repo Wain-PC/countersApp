@@ -3,6 +3,17 @@ AutoForm.addHooks('adminUseraddForm', AutoFormHooks.getServerMessage);
 
 Template.adminUseradd.helpers({
     userAddSchema: function() {
-        return Schemas.User;
+        return Schemas.addUser;
+    }
+});
+
+Template.adminUseradd.events({
+    'click button#passwordGenerate': function () {
+        event.preventDefault();
+        var generatedPassword = Meteor.call('passwordGenerate', function (error, result) {
+            if(result) {
+                $('#adminUseraddForm input[name="password"]').val(result);
+            }
+        });
     }
 });

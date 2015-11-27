@@ -1,4 +1,5 @@
 {
   "imap": "0.8.16",
-  "mailparser": "0.5.3"
+  "mailparser": "0.5.3",
+  "password-generator": "2.0.2"
 }
