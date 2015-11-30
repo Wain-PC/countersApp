@@ -119,14 +119,29 @@ Meteor.methods({
         return Rows.find({userId: this.userId});
     },
 
-    passwordGenerate: function () {
+    'passwordGenerate': function () {
         var generatePassword = Meteor.npmRequire('password-generator');
         var pass = generatePassword();
         console.log(pass);
         return pass;
     },
 
+    'adm_checkUserByEmail': function (userEmail) {
+        console.log("Checking user with email ", userEmail);
+        console.log(this);
+        if (!Roles.userIsInRole(this.userId, ['admin'])) {
+            /*notifyClient({
+                type: 'error',
+                title: 'Ошибка доступа!',
+                message: 'Для вызова этой процедуры необходимы права администратора'
+            });*/
+        }
+        check(userEmail, String);
+        return Meteor.users.findOne({ "emails.address" : userEmail });
+    },
+
     'adm_userAdd': function (doc) {
+        console.log("Creating user", doc);
         //добавление пользователей доступно только администратору
         check(doc, Schemas.addUser);
         if (!Roles.userIsInRole(this.userId, ['admin'])) {
@@ -137,7 +152,7 @@ Meteor.methods({
             });
         }
 
-        result = Accounts.createUser({
+        var result = Accounts.createUser({
             email: doc.email,
             password: doc.password,
             flatNumber: doc.flatNumber
@@ -156,22 +171,39 @@ Meteor.methods({
                 title: 'Пользователь ' + doc.email + ' создан успешно'
             });
         }
+    },
 
+    'adm_checkMailProgress': function() {
 
     },
 
     'adm_checkMail': function() {
-        return Async.runSync(function (done) {
-            //do all async stuff
-            Mail.imap.once('ready', function() {
-                Mail.imap.openBox('ПОКАЗАНИЯ СЧЕТЧИКОВ', true, function(err, box) {
-                    var mailCounter = 0;
-                    if (err) throw err;
-                    console.log(box);
+        console.log("adm_checkMail started");
+        var result;
+        result = Async.runSync(function (done) {
+            var mailCounter = 0;
+            var Mail = {};
+            Mail.mailConfig = {
+                user: '***',
+                password: '***',
+                host: '***',
+                port: 993,
+                tls: true
+            };
 
-                    var f = Mail.imap.seq.fetch(box.messages.total + ':*', {
-                        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
-                        struct: true
+
+            Mail.MailParser = Meteor.npmRequire('mailparser').MailParser;
+            Mail.mailParser = new Mail.MailParser();
+            Mail.Imap = Meteor.npmRequire('imap');
+            Mail.inspect = Meteor.npmRequire('util').inspect;
+            Mail.imap = new Mail.Imap(Mail.mailConfig);
+
+            Mail.imap.once('ready', Async.wrap(function() {
+                Mail.imap.openBox('ПОКАЗАНИЯ СЧЕТЧИКОВ', true, function(err, box) {
+                    if (err) throw err;
+
+                    var f = Mail.imap.seq.fetch('1:' + '3', {
+                        bodies: ''
                     });
 
                     f.on('message', function(msg, seqno) {
@@ -182,18 +214,60 @@ Meteor.methods({
                             stream.on('data', function(chunk) {
                                 buffer += chunk.toString('utf8');
                             });
-                            stream.once('end', function() {
-                                var message = Mail.Imap.parseHeader(buffer);
-                                var messageString = Mail.inspect(Mail.Imap.parseHeader(buffer));
-                                console.log('-------------------------');
-                                console.log(prefix);
-                                console.log(messageString);
-                                mailCounter++;
+                            stream.once('end', Async.wrap(function() {
+                                    var headers = Mail.Imap.parseHeader(buffer),
+                                        flatNumber, senderEmail, countersValues,
+                                        month, year;
+                                    console.log('-------------------------');
+                                    //please DO NOT LOOK BELOW. These regexps will make ur eyes BLEED and FALL OUT!
+                                    var regExps = {
+                                        header: /^Показания счетчиков (\d{4})-(\d{2}) кв\. (\d+)$/,
+                                        body: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><tr><table><p>(.*?)<\/p>/,
+                                        isElectricityDirect: /([Дд]оговор|[Пп]рямой)/
+                                    }, regexpResult;
+                                    regexpResult = regExps.header.exec(headers.subject[0]);
+                                    //не вышло распарсить сообщение, нужно написать об ошибке и перейти к следующему
+                                    if(!regexpResult) {
+                                        console.log("Cannot parse HEADER for message %s", prefix);
+                                        return false;
+                                    }
+                                    year = Number(regexpResult[1]);
+                                    month = Number(regexpResult[2]);
+                                    flatNumber = Number(regexpResult[3]);
+                                    console.log(year, month, flatNumber, buffer);
+                                    regexpResult = regExps.body.exec(buffer);
+                                    if(!regexpResult) {
+                                        console.log("Cannot parse BODY for message %s", prefix);
+                                        return false;
+                                    }
+                                    senderEmail = regexpResult[1];
+                                    //нашли отправителя. Проверим, есть ли такой юзер у нас в базе.
+                                    var senderUser = Meteor.call('adm_checkUserByEmail', senderEmail);
+                                    //если юзера нет, создадим его
+                                    if(!senderUser) {
+                                        console.log("No user with email %s", senderEmail);
+                                        senderUser = Meteor.call('adm_userAdd',{
+                                            email: senderEmail,
+                                            password: Meteor.call('passwordGenerate'),
+                                            flatNumber: flatNumber
+                                        });
+                                        console.log("USer created", senderUser);
+                                    }
 
-                            });
-                        });
-                        msg.once('attributes', function(attrs) {
-                            //console.log(prefix + 'Attributes: %s', Mail.inspect(attrs, false, 8));
+                                    countersValues = {
+                                        userId: senderUser.id,
+                                        coldwater1: regexpResult[2],
+                                        coldwater2: regexpResult[3],
+                                        hotwater1: regexpResult[4],
+                                        hotwater2: regexpResult[5],
+                                        electricity: regexpResult[6],
+                                        electricity_direct: regExps.isElectricityDirect.test(regexpResult[7]),
+                                        comment: regexpResult[7]
+                                    };
+
+
+                                    mailCounter++;
+                            }));
                         });
                         msg.once('end', function() {
                             console.log(prefix + 'Parsed');
@@ -202,28 +276,29 @@ Meteor.methods({
                     f.once('error', function(err) {
                         var result = -1;
                         console.log('Fetch error: ' + err);
-                        if(done) {
-                            done(err,result)
-                        }
+                        done(err,result)
                     });
                     f.once('end', function() {
                         console.log('Done fetching all messages!');
                         Mail.imap.end();
-                        if(done) {
-                            done(null,mailCounter);
-                        }
+                        done(null,mailCounter);
                     });
 
                 });
-            });
+            }));
             Mail.imap.once('error', function(err) {
                 console.log(err);
+                done(err,null);
             });
             Mail.imap.once('end', function() {
                 console.log('Connection ended');
+                done(null,'Connection ended');
             });
             Mail.imap.connect();
         });
+        console.log(result);
+        return result;
+
     }
 });
 
