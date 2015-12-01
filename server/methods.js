@@ -16,6 +16,7 @@ Meteor.methods({
                 type: 'success',
                 title: 'Показания успешно добавлены!'
             });
+            return;
         }
         //показания найдены. Определим, может ли пользователь их редактировать.
         //Редактирование показаний доступно только в первые сутки после их добавления
@@ -39,7 +40,7 @@ Meteor.methods({
                 type: 'error',
                 title: 'Внимание!',
                 message: 'Показания за этот месяц уже существуют!' +
-            'Изменение этих показаний недоступно, поскольку с момента их внесения прошло более 24 часов'
+                'Изменение этих показаний недоступно, поскольку с момента их внесения прошло более 24 часов'
             });
         }
 
@@ -62,6 +63,7 @@ Meteor.methods({
                 title: 'Ошибка',
                 message: 'Показаний, которые Вы редактируете, не существует'
             });
+            return;
         }
         //показания найдены. Определим, может ли пользователь их редактировать.
         //Редактирование показаний доступно только в первые сутки после их добавления
@@ -84,11 +86,11 @@ Meteor.methods({
                 multi: false
             }];
             var updateResult = Rows.update.apply(Rows, updateObj);
-            if(updateResult) {
+            if (updateResult) {
                 notifyClient({
                     type: 'info',
                     title: 'Показания успешно изменены!',
-                    message: 'Обратите внимание, что Вы не сможете отредактировать показания через '+ moment(tomorrowDate).toNow(true)
+                    message: 'Обратите внимание, что Вы не сможете отредактировать показания через ' + moment(tomorrowDate).toNow(true)
                 });
             }
             else {
@@ -97,6 +99,7 @@ Meteor.methods({
                     title: 'Ошибка!',
                     message: 'Во время изменения показаний произошла ошибка. Показания не были изменены'
                 });
+                return;
             }
         }
         else {
@@ -122,26 +125,29 @@ Meteor.methods({
     'passwordGenerate': function () {
         var generatePassword = Meteor.npmRequire('password-generator');
         var pass = generatePassword();
-        console.log(pass);
+        //console.log(pass);
         return pass;
     },
 
     'adm_checkUserByEmail': function (userEmail) {
-        console.log("Checking user with email ", userEmail);
-        console.log(this);
         if (!Roles.userIsInRole(this.userId, ['admin'])) {
-            /*notifyClient({
+            notifyClient({
                 type: 'error',
                 title: 'Ошибка доступа!',
                 message: 'Для вызова этой процедуры необходимы права администратора'
-            });*/
+            });
+            return;
         }
         check(userEmail, String);
-        return Meteor.users.findOne({ "emails.address" : userEmail });
+        var result = Meteor.users.findOne({"emails.address": userEmail});
+        if(result) {
+            return result._id;
+        }
+        return null;
     },
 
     'adm_userAdd': function (doc) {
-        console.log("Creating user", doc);
+        //console.log("Creating user", doc);
         //добавление пользователей доступно только администратору
         check(doc, Schemas.addUser);
         if (!Roles.userIsInRole(this.userId, ['admin'])) {
@@ -150,15 +156,21 @@ Meteor.methods({
                 title: 'Ошибка доступа!',
                 message: 'Для добавления пользователей нужны права администратора.'
             });
+            return;
         }
 
-        var result = Accounts.createUser({
+        var userId = Meteor.call('adm_checkUserByEmail', doc.email);
+        if(userId) {
+            return userId;
+        }
+
+        userId = Accounts.createUser({
             email: doc.email,
             password: doc.password,
             flatNumber: doc.flatNumber
         });
-        console.log("User creation result: %s", result);
-        if(!result) {
+
+        if (!userId) {
             notifyClient({
                 type: 'error',
                 title: 'Ошибка создания пользователя!',
@@ -171,14 +183,10 @@ Meteor.methods({
                 title: 'Пользователь ' + doc.email + ' создан успешно'
             });
         }
+        return userId;
     },
 
-    'adm_checkMailProgress': function() {
-
-    },
-
-    'adm_checkMail': function() {
-        console.log("adm_checkMail started");
+    'adm_checkMail': function () {
         var result;
         result = Async.runSync(function (done) {
             var mailCounter = 0;
@@ -198,105 +206,131 @@ Meteor.methods({
             Mail.inspect = Meteor.npmRequire('util').inspect;
             Mail.imap = new Mail.Imap(Mail.mailConfig);
 
-            Mail.imap.once('ready', Async.wrap(function() {
-                Mail.imap.openBox('ПОКАЗАНИЯ СЧЕТЧИКОВ', true, function(err, box) {
+            Mail.imap.once('ready', Meteor.bindEnvironment(function () {
+                Mail.imap.openBox('ПОКАЗАНИЯ СЧЕТЧИКОВ', true, Meteor.bindEnvironment(function (err, box) {
                     if (err) throw err;
 
-                    var f = Mail.imap.seq.fetch('1:' + '3', {
+                    var f = Mail.imap.seq.fetch(box.messages.total + ':1', {
                         bodies: ''
                     });
 
-                    f.on('message', function(msg, seqno) {
+                    f.on('message', Meteor.bindEnvironment(function (msg, seqno) {
                         var prefix = '(#' + seqno + ') ';
-                        console.log(prefix);
-                        msg.on('body', function(stream, info) {
+                        msg.on('body', Meteor.bindEnvironment(function (stream, info) {
                             var buffer = '';
-                            stream.on('data', function(chunk) {
+                            stream.on('data', function (chunk) {
                                 buffer += chunk.toString('utf8');
                             });
-                            stream.once('end', Async.wrap(function() {
-                                    var headers = Mail.Imap.parseHeader(buffer),
-                                        flatNumber, senderEmail, countersValues,
-                                        month, year;
-                                    console.log('-------------------------');
-                                    //please DO NOT LOOK BELOW. These regexps will make ur eyes BLEED and FALL OUT!
-                                    var regExps = {
-                                        header: /^Показания счетчиков (\d{4})-(\d{2}) кв\. (\d+)$/,
-                                        body: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><tr><table><p>(.*?)<\/p>/,
-                                        isElectricityDirect: /([Дд]оговор|[Пп]рямой)/
-                                    }, regexpResult;
-                                    regexpResult = regExps.header.exec(headers.subject[0]);
-                                    //не вышло распарсить сообщение, нужно написать об ошибке и перейти к следующему
-                                    if(!regexpResult) {
-                                        console.log("Cannot parse HEADER for message %s", prefix);
-                                        return false;
+                            stream.once('end', Meteor.bindEnvironment(function () {
+                                console.log("----------------" + prefix);
+                                var headers = Mail.Imap.parseHeader(buffer),
+                                    flatNumber, senderEmail, countersValues,
+                                    month, year;
+                                //please DO NOT LOOK BELOW. These regexps will make ur eyes BLEED and FALL OUT!
+                                var regExps = {
+                                    header: /^Показания счетчиков (\d{4})-(\d{2}) кв\. (\d+)$/,
+                                    //без тепла
+                                    body: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
+                                    //с теплом
+                                    body2: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
+                                    body3: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]+?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
+                                    isElectricityDirect: /([Дд]оговор|[Пп]рямой)/
+                                }, regexpResult;
+                                regexpResult = regExps.header.exec(headers.subject[0]);
+                                //не вышло распарсить сообщение, нужно написать об ошибке и перейти к следующему
+                                if (!regexpResult) {
+                                    console.log("Cannot parse HEADER for message %s", prefix);
+                                    console.log(headers);
+                                    return false;
+                                }
+                                year = Number(regexpResult[1]);
+                                month = Number(regexpResult[2]);
+                                flatNumber = Number(regexpResult[3]);
+                                regexpResult = regExps.body.exec(buffer);
+                                if (!regexpResult) {
+                                    //повторим то же, но с другой регуляркой.
+                                    regexpResult = regExps.body2.exec(buffer);
+                                }
+                                if (!regexpResult) {
+                                    console.log("Cannot parse BODY for message %s", prefix);
+                                    console.log(buffer);
+                                    return false;
+                                }
+                                senderEmail = regexpResult[1];
+                                console.log("No user with email %s", senderEmail);
+                                Meteor.call('adm_userAdd', {
+                                    email: senderEmail,
+                                    password: Meteor.call('passwordGenerate'),
+                                    flatNumber: flatNumber
+                                }, function (error, userId) {
+                                    if(!userId) {
+                                        console.log("-----!!!! ERR NO USER_ID!");
+                                        Meteor._sleepForMs(5000);
                                     }
-                                    year = Number(regexpResult[1]);
-                                    month = Number(regexpResult[2]);
-                                    flatNumber = Number(regexpResult[3]);
-                                    console.log(year, month, flatNumber, buffer);
-                                    regexpResult = regExps.body.exec(buffer);
-                                    if(!regexpResult) {
-                                        console.log("Cannot parse BODY for message %s", prefix);
-                                        return false;
-                                    }
-                                    senderEmail = regexpResult[1];
-                                    //нашли отправителя. Проверим, есть ли такой юзер у нас в базе.
-                                    var senderUser = Meteor.call('adm_checkUserByEmail', senderEmail);
-                                    //если юзера нет, создадим его
-                                    if(!senderUser) {
-                                        console.log("No user with email %s", senderEmail);
-                                        senderUser = Meteor.call('adm_userAdd',{
-                                            email: senderEmail,
-                                            password: Meteor.call('passwordGenerate'),
-                                            flatNumber: flatNumber
-                                        });
-                                        console.log("USer created", senderUser);
-                                    }
+                                    countersValues = {
+                                        userId: userId,
+                                        month: month,
+                                        year: year,
+                                        coldwater1: parseFloat(regexpResult[2].replace(',','.')) || 0,
+                                        coldwater2: parseFloat(regexpResult[3].replace(',','.')) || 0,
+                                        hotwater1: parseFloat(regexpResult[4].replace(',','.')) || 0,
+                                        hotwater2: parseFloat(regexpResult[5].replace(',','.')) || 0,
+                                        electricity: parseFloat(regexpResult[6].replace(',','.')) || null,
+                                        electricity_direct: regExps.isElectricityDirect.test(regexpResult[7]),
+                                        comment: regexpResult[7],
+                                        createdAt: new Date(headers.date[0])
+                                    };
 
                                     countersValues = {
-                                        userId: senderUser.id,
+                                        userId: userId,
+                                        month: month,
+                                        year: year,
                                         coldwater1: regexpResult[2],
                                         coldwater2: regexpResult[3],
                                         hotwater1: regexpResult[4],
                                         hotwater2: regexpResult[5],
                                         electricity: regexpResult[6],
                                         electricity_direct: regExps.isElectricityDirect.test(regexpResult[7]),
-                                        comment: regexpResult[7]
+                                        comment: regexpResult[7],
+                                        createdAt: new Date(headers.date[0])
                                     };
 
-
-                                    mailCounter++;
+                                    var addCountersResult = Meteor.call('rowAdd', countersValues, function (error, result) {
+                                        if(error) {
+                                            console.log(countersValues);
+                                        }
+                                    });
+                                    if(addCountersResult) {
+                                        mailCounter++;
+                                    }
+                                });
                             }));
-                        });
-                        msg.once('end', function() {
-                            console.log(prefix + 'Parsed');
-                        });
-                    });
-                    f.once('error', function(err) {
+                        }));
+                    }));
+                    f.once('error', function (err) {
                         var result = -1;
                         console.log('Fetch error: ' + err);
-                        done(err,result)
+                        done(err, result)
                     });
-                    f.once('end', function() {
-                        console.log('Done fetching all messages!');
+                    f.once('end', function () {
+                        //console.log('Done fetching all messages!');
                         Mail.imap.end();
-                        done(null,mailCounter);
+                        done(null, mailCounter);
                     });
 
-                });
+                }));
             }));
-            Mail.imap.once('error', function(err) {
+            Mail.imap.once('error', function (err) {
+                console.log("Imap error happenned!");
                 console.log(err);
-                done(err,null);
+                done(err, null);
             });
-            Mail.imap.once('end', function() {
+            Mail.imap.once('end', function () {
                 console.log('Connection ended');
-                done(null,'Connection ended');
+                done(null, 'Connection ended');
             });
             Mail.imap.connect();
         });
-        console.log(result);
         return result;
 
     }
@@ -304,5 +338,6 @@ Meteor.methods({
 
 
 function notifyClient(params) {
-    throw new Meteor.Error(params.type || 'info', params.title || '', {message: params.message || '', options:  params.options || {}});
+    //console.log("$$$---Notifying client with:", params);
+    //throw new Meteor.Error(params.type || 'info', params.title || '', {message: params.message || '', options:  params.options || {}});
 }

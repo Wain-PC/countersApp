@@ -14,6 +14,7 @@ TabularTables.Rows = new Tabular.Table({
         {data: "coldwater2", title: "ХВС2"},
         {data: "hotwater1", title: "ГВС1"},
         {data: "hotwater2", title: "ГВС2"},
+        {data: "heat", title: "Тепло"},
         {data: "electricity", title: "Электричество"},
         {
             data: 'electricity_direct',
@@ -24,7 +25,9 @@ TabularTables.Rows = new Tabular.Table({
     ],
     extraFields: ['year'],
     selector: function( userId ) {
-        console.log(arguments);
+        if(Roles.userIsInRole(userId,'admin')) {
+            return {};
+        }
         return { userId: userId }
     },
     searchable: false,
