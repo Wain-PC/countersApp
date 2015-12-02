@@ -230,10 +230,9 @@ Meteor.methods({
                                 var regExps = {
                                     header: /^Показания счетчиков (\d{4})-(\d{2}) кв\. (\d+)$/,
                                     //без тепла
-                                    body: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
+                                    body: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d,.]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
                                     //с теплом
-                                    body2: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+?)<\/td><td>([\d,.]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
-                                    body3: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]+?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]+)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
+                                    body2: /<p>(.+?)<\/p>.+?<\/thead><tr><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]+?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><td>([\d.,]*?)\D*?<\/td><tr><table><p>(.*?)<\/p>/,
                                     isElectricityDirect: /([Дд]оговор|[Пп]рямой)/
                                 }, regexpResult;
                                 regexpResult = regExps.header.exec(headers.subject[0]);
