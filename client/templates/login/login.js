@@ -20,11 +20,11 @@
         'click #form-signin-try': function(event) {
             event.preventDefault();
             var login, password;
-            login = 'demo';
+            login = 'demo@demo.demo';
             password = 'demopass';
             Meteor.loginWithPassword(login, password, function(err) {
                 if(!err) {
-                    Router.go('rowsList');
+                    Router.go('rows.list');
                     return;
                 }
                 Notifications.error('Ошибка входа', 'Введен неверный логин или пароль');
