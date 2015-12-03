@@ -17,3 +17,8 @@ Template.adminUseradd.events({
         });
     }
 });
+
+Template.adminUseradd.onRendered(function () {
+    // Use the Packery jQuery plugin
+    $('button#passwordGenerate').click();
+});

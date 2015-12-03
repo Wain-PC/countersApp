@@ -1,0 +1,17 @@
+﻿<template name="adminUseredit">
+    <div class="row">
+        <div class="col-sm-6 col-md-4 col-md-offset-4">
+            {{#autoForm collection="Meteor.users" id="editUserForm" type="update" doc=this}}
+                <fieldset>
+                    <legend>Редактирование пользователя {{_id}}</legend>
+                    {{> afQuickField name='_id'}}
+                    {{> afQuickField name='emails.0.address'}}
+                    {{> afQuickField name='emails.0.verified'}}
+                    {{> afQuickField name='flatNumber'}}
+                    {{> afQuickField name='roles.0'}}
+                </fieldset>
+                <button type="submit" class="btn btn-primary">Изменить</button>
+            {{/autoForm}}
+        </div>
+    </div>
+</template>

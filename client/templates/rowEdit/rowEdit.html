@@ -1,7 +1,7 @@
 ﻿<template name="rowEdit">
     <div class="row">
         <div class="col-sm-6 col-md-4 col-md-offset-4">
-            {{#autoForm collection="Rows" id="editRowForm" type="method"  meteormethod="rowEdit" doc=this}}
+            {{#autoForm collection="Rows" id="editRowForm" type="method-update"  meteormethod="rowEdit" doc=this}}
                 <fieldset>
                     <legend>Изменение показаний за {{getMonthYear}}</legend>
                     {{> afQuickField name='userId' type='hidden'}}

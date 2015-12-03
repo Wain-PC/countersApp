@@ -1,8 +1,30 @@
 <template name="admin_navigation">
-    <li>
-        <a href="{{pathFor 'admin.useradd'}}">Добавить пользователя</a>
+    <li class="dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Администрирование<span class="caret"></span></a>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="{{pathFor 'admin.userlist'}}">Пользователи</a>
+            </li>
+            <li>
+                <a href="{{pathFor 'admin.useradd'}}">Добавить пользователя</a>
+            </li>
+            <li>
+                <a href="{{pathFor 'admin.postparse'}}">Получить показания из почты</a>
+            </li>
+        </ul>
     </li>
-    <li>
-        <a href="{{pathFor 'admin.postparse'}}">Получить показания из почты</a>
+    <li class="dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Графики<span class="caret"></span></a>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="{{pathFor 'admin.graphs.stats'}}">Статистика подачи</a>
+            </li>
+            <li>
+                <a href="{{pathFor 'admin.graphs.perflat'}}">Поквартирные показания</a>
+            </li>
+            <li>
+                <a href="{{pathFor 'admin.graphs.statsmonthly'}}">Помесячное потребление</a>
+            </li>
+        </ul>
     </li>
 </template>
