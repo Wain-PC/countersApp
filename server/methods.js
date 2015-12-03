@@ -5,7 +5,7 @@ Meteor.methods({
         var userId = this.userId,
             existingRow,
             tomorrowDate, thenDate;
-
+        doc.userId = userId;
         //проверим, что этот пользователь уже загружал показания на сервер.
         existingRow = Meteor.call('checkExistingRow', doc);
         //если это так, нужно определить, доступна ли ему возможность редактирования показаний
@@ -47,17 +47,20 @@ Meteor.methods({
 
     },
 
-    'rowEdit': function (doc) {
+    'rowEdit': function (doc, rowId) {
+        var userId = this.userId;
         check(doc, Schemas.Row);
-        var userId = this.userId,
-            existingRow,
-            tomorrowDate, thenDate;
+        check(rowId, String);
+        var existingRow,
+            tomorrowDate, thenDate,
+            isAdmin = Roles.userIsInRole(userId,'admin'),
+            updDoc = doc.$set;
 
         //проверим, что этот пользователь уже загружал показания на сервер.
-        existingRow = Meteor.call('checkExistingRow', doc);
+        existingRow = Meteor.call('checkExistingRow', doc.$set);
         //если это так, нужно определить, доступна ли ему возможность редактирования показаний
         //в случае, если за эту дату показания еще не загружались, загрузим их
-        if (!existingRow) {
+        if (!existingRow || (!isAdmin && updDoc.userId !== userId)) {
             notifyClient({
                 type: 'error',
                 title: 'Ошибка',
@@ -67,25 +70,11 @@ Meteor.methods({
         }
         //показания найдены. Определим, может ли пользователь их редактировать.
         //Редактирование показаний доступно только в первые сутки после их добавления
-        tomorrowDate = new Date();
-        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
         thenDate = existingRow.createdAt;
-        if (+tomorrowDate > +thenDate) {
-            var updateObj = [{userId: doc.userId, month: doc.month, year: doc.year}, {
-                $set: {
-                    coldwater1: doc.coldwater1,
-                    coldwater2: doc.coldwater2,
-                    hotwater1: doc.hotwater1,
-                    hotwater2: doc.hotwater2,
-                    electricity: doc.electricity,
-                    electricity_direct: doc.electricity_direct,
-                    comment: doc.comment
-                }
-            }, {
-                upsert: false,
-                multi: false
-            }];
-            var updateResult = Rows.update.apply(Rows, updateObj);
+        tomorrowDate = thenDate;
+        tomorrowDate.setDate(thenDate.getDate() + 1);
+        if (+tomorrowDate > +thenDate || isAdmin) {
+            var updateResult = Rows.update({userId: updDoc.userId, month: updDoc.month, year: updDoc.year}, doc);
             if (updateResult) {
                 notifyClient({
                     type: 'info',
@@ -125,7 +114,6 @@ Meteor.methods({
     'passwordGenerate': function () {
         var generatePassword = Meteor.npmRequire('password-generator');
         var pass = generatePassword();
-        //console.log(pass);
         return pass;
     },
 
@@ -147,7 +135,6 @@ Meteor.methods({
     },
 
     'adm_userAdd': function (doc) {
-        //console.log("Creating user", doc);
         //добавление пользователей доступно только администратору
         check(doc, Schemas.addUser);
         if (!Roles.userIsInRole(this.userId, ['admin'])) {
@@ -385,6 +372,6 @@ Meteor.methods({
 
 
 function notifyClient(params) {
-    //console.log("$$$---Notifying client with:", params);
+    console.log("$$$---Notifying client with:", params);
     //throw new Meteor.Error(params.type || 'info', params.title || '', {message: params.message || '', options:  params.options || {}});
 }

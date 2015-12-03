@@ -1,7 +1,22 @@
 ﻿<template name="rowAdd">
     <div class="row">
         <div class="col-sm-6 col-md-4 col-md-offset-4">
-            {{> quickForm collection="Rows" id="insertRowForm" type="method"  meteormethod="rowAdd"}}
+            {{#autoForm collection="Rows" id="insertRowForm" type="method"  meteormethod="rowAdd" doc=this}}
+                <fieldset>
+                    <legend>Добавление показаний</legend>
+                    {{> afQuickField name='userId' type='hidden' value='---'}}
+                    {{> afQuickField name='month'}}
+                    {{> afQuickField name='year'}}
+                    {{> afQuickField name='coldwater1'}}
+                    {{> afQuickField name='coldwater2'}}
+                    {{> afQuickField name='hotwater1'}}
+                    {{> afQuickField name='hotwater2'}}
+                    {{> afQuickField name='electricity'}}
+                    {{> afQuickField name='electricity_direct'}}
+                    {{> afQuickField name='comment'}}
+                </fieldset>
+                <button type="submit" class="btn btn-primary">Изменить</button>
+            {{/autoForm}}
         </div>
     </div>
 </template>
