@@ -4,8 +4,6 @@ Template.rowAdd.helpers({
     }
 });
 
-AutoForm.addHooks('insertRowForm', AutoFormHooks.getServerMessage);
-
 Template.rowAdd.events({
     'click span.check': CommonEvents.toggleElectricityDirect
 });

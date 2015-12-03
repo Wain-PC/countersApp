@@ -1,0 +1,15 @@
+﻿<template name="adminUserview">
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-md-offset-0">
+            <h3>Просмотр пользователя {{_id}}</h3>
+            <a href="{{pathFor 'admin.useredit'}}" class="btn btn-sm btn-primary btn-default">Редактировать</a>
+        </div>
+    </div>
+    <div class="rows page">
+        <div class="wrapper">
+            <div class="bs-component">
+                {{> tabular table=TabularTables.Rows selector=userSelector class="table table-striped table-bordered table-condensed"}}
+            </div>
+        </div>
+    </div>
+</template>

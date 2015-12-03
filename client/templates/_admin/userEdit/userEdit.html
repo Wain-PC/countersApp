@@ -4,7 +4,7 @@
             {{#autoForm collection="Meteor.users" id="editUserForm" type="update" doc=this}}
                 <fieldset>
                     <legend>Редактирование пользователя {{_id}}</legend>
-                    {{> afQuickField name='_id'}}
+                    {{> afQuickField name='_id' type='hidden'}}
                     {{> afQuickField name='emails.0.address'}}
                     {{> afQuickField name='emails.0.verified'}}
                     {{> afQuickField name='flatNumber'}}

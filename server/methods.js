@@ -4,8 +4,12 @@ Meteor.methods({
         check(doc, Schemas.Row);
         var userId = this.userId,
             existingRow,
-            tomorrowDate, thenDate;
-        doc.userId = userId;
+            tomorrowDate, thenDate,
+            isAdmin = Roles.userIsInRole(userId,'admin');
+
+        if(!isAdmin) {
+            doc.userId = userId;
+        }
         //проверим, что этот пользователь уже загружал показания на сервер.
         existingRow = Meteor.call('checkExistingRow', doc);
         //если это так, нужно определить, доступна ли ему возможность редактирования показаний
@@ -20,10 +24,10 @@ Meteor.methods({
         }
         //показания найдены. Определим, может ли пользователь их редактировать.
         //Редактирование показаний доступно только в первые сутки после их добавления
-        tomorrowDate = new Date();
-        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
         thenDate = existingRow.createdAt;
-        if (+tomorrowDate > +thenDate) {
+        tomorrowDate = new Date();
+        tomorrowDate.setDate(thenDate.getDate() + 1);
+        if (+tomorrowDate > +thenDate || isAdmin) {
             notifyClient({
                 type: 'info',
                 title: 'Внимание!',

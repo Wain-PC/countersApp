@@ -1,5 +1,3 @@
-AutoForm.addHooks('adminUseraddForm', AutoFormHooks.getServerMessage);
-
 Template.adminPostparse.events({
     'click button#postParse': function (event) {
         event.preventDefault();

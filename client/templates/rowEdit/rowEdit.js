@@ -1,5 +1,3 @@
-AutoForm.addHooks('editRowForm', AutoFormHooks.getServerMessage);
-
 Template.rowEdit.helpers({
     getMonthYear: function () {
         var date = moment(this.month + '-' + this.year, 'M-YYYY');
