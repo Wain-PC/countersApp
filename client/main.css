@@ -5,3 +5,8 @@ ul.notifications {
 .checkbox .checkbox-material:before {
     top:0;
 }
+
+.dataTables_wrapper .col-xs-12 {
+    overflow: auto;
+
+}
