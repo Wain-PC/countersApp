@@ -1,7 +1,8 @@
 ﻿<template name="adminUserview">
     <div class="row">
         <div class="col-sm-12 col-md-12 col-md-offset-0">
-            <h3>Просмотр пользователя {{_id}}</h3>
+            <h4>Кв. <strong>{{flatNumber}}</strong></h4>
+            <h4>Email:<strong>{{getEmail}}</strong></h4>
             <a href="{{pathFor 'admin.useredit'}}" class="btn btn-sm btn-primary btn-default">Редактировать</a>
         </div>
     </div>

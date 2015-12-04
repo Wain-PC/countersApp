@@ -14,3 +14,11 @@
 <template name="rowItemPeriod">
     <a href="{{pathFor 'rows.edit'}}">{{getMonthCaption month}} {{year}}</a>
 </template>
+
+<template name="rowItemUserViewLink">
+    {{#if isInRole 'admin'}}
+    <a href="{{pathFor 'admin.userview' _id=userId}}">{{getEmail}}</a>
+    {{else}}
+        {{getEmail}}
+    {{/if}}
+</template>

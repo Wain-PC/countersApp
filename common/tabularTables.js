@@ -1,9 +1,29 @@
 TabularTables = {};
 Meteor.isClient && Template.registerHelper('TabularTables', TabularTables);
+
+Rows.helpers({
+    getEmail: function () {
+        var user = Meteor.users.findOne({_id: this.userId});
+        return user && user.emails[0].address;
+    },
+    getFlatNumber: function () {
+        var user = Meteor.users.findOne({_id: this.userId});
+        return user && user.flatNumber;
+    }
+});
+
 TabularTables.Rows = new Tabular.Table({
     name: "Rows",
     collection: Rows,
     columns: [
+        {
+            data: "getFlatNumber()",
+            title: "№ квартиры"
+        },
+        {
+            title: "E-mail",
+            tmpl: Meteor.isClient && Template.rowItemUserViewLink
+        },
         {
             data: "month",
             title: "Период показаний",
@@ -21,9 +41,9 @@ TabularTables.Rows = new Tabular.Table({
             title: "Прямой договор",
             tmpl: Meteor.isClient && Template.rowItemCheckbox
         },
-        {data: "comment", title: "Комментарий"}
+        {data: "comment", title: "Комментарий", autoWidth: false}
     ],
-    extraFields: ['year'],
+    extraFields: ['year','userId'],
     selector: function( userId ) {
         if(Roles.userIsInRole(userId,'admin')) {
             return {};

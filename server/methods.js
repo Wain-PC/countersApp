@@ -22,34 +22,7 @@ Meteor.methods({
             });
             return true;
         }
-        //показания найдены. Определим, может ли пользователь их редактировать.
-        //Редактирование показаний доступно только в первые сутки после их добавления
-        thenDate = existingRow.createdAt;
-        tomorrowDate = new Date();
-        tomorrowDate.setDate(thenDate.getDate() + 1);
-        if (+tomorrowDate > +thenDate || isAdmin) {
-            notifyClient({
-                type: 'info',
-                title: 'Внимание!',
-                message: 'Показания за этот месяц уже существуют!' +
-                'Вы были перенаправлены на страницу редактирования показаний',
-                options: {
-                    timeout: 10000,
-                    redirect: existingRow._id
-                }
-            });
-            return false;
-        }
-        else {
-            notifyClient({
-                type: 'error',
-                title: 'Внимание!',
-                message: 'Показания за этот месяц уже существуют!' +
-                'Изменение этих показаний недоступно, поскольку с момента их внесения прошло более 24 часов'
-            });
-            return false;
-        }
-
+        return Meteor.call('rowEdit', {$set: doc}, existingRow._id);
 
     },
 
@@ -58,7 +31,7 @@ Meteor.methods({
         check(doc, Schemas.Row);
         check(rowId, String);
         var existingRow,
-            tomorrowDate, thenDate,
+            nowDate, maxPossibleEditDate,
             isAdmin = Roles.userIsInRole(userId,'admin'),
             updDoc = doc.$set;
 
@@ -76,16 +49,17 @@ Meteor.methods({
         }
         //показания найдены. Определим, может ли пользователь их редактировать.
         //Редактирование показаний доступно только в первые сутки после их добавления
-        thenDate = existingRow.createdAt;
-        tomorrowDate = thenDate;
-        tomorrowDate.setDate(thenDate.getDate() + 1);
-        if (+tomorrowDate > +thenDate || isAdmin) {
+        maxPossibleEditDate = new Date(existingRow.createdAt);
+        maxPossibleEditDate.setDate(maxPossibleEditDate.getDate() + 1);
+        nowDate = new Date();
+        console.log(maxPossibleEditDate, nowDate);
+        if (+nowDate < +maxPossibleEditDate || isAdmin) {
             var updateResult = Rows.update({userId: updDoc.userId, month: updDoc.month, year: updDoc.year}, doc);
             if (updateResult) {
                 notifyClient({
                     type: 'info',
                     title: 'Показания успешно изменены!',
-                    message: 'Обратите внимание, что Вы не сможете отредактировать показания через ' + moment(tomorrowDate).toNow(true)
+                    message: 'Обратите внимание, что Вы не сможете отредактировать показания через ' + moment(maxPossibleEditDate).toNow(true)
                 });
             }
             else {
