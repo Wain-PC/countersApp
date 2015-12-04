@@ -20,7 +20,7 @@ Meteor.methods({
                 type: 'success',
                 title: 'Показания успешно добавлены!'
             });
-            return;
+            return true;
         }
         //показания найдены. Определим, может ли пользователь их редактировать.
         //Редактирование показаний доступно только в первые сутки после их добавления
@@ -38,6 +38,7 @@ Meteor.methods({
                     redirect: existingRow._id
                 }
             });
+            return false;
         }
         else {
             notifyClient({
@@ -46,6 +47,7 @@ Meteor.methods({
                 message: 'Показания за этот месяц уже существуют!' +
                 'Изменение этих показаний недоступно, поскольку с момента их внесения прошло более 24 часов'
             });
+            return false;
         }
 
 
@@ -227,7 +229,7 @@ Meteor.methods({
                 Mail.imap.openBox('ПОКАЗАНИЯ СЧЕТЧИКОВ', true, Meteor.bindEnvironment(function (err, box) {
                     if (err) throw err;
 
-                    var f = Mail.imap.seq.fetch(box.messages.total + ':' + (box.messages.total - 30), {
+                    var f = Mail.imap.seq.fetch(box.messages.total + ':' + (box.messages.total - 300), {
                         bodies: ''
                     });
 
@@ -239,7 +241,7 @@ Meteor.methods({
                                 buffer += chunk.toString('utf8');
                             });
                             stream.once('end', Meteor.bindEnvironment(function () {
-                                console.log("----------------" + prefix);
+                                //console.log("----------------" + prefix);
                                 var headers = Mail.Imap.parseHeader(buffer),
                                     flatNumber, senderEmail, countersValues,
                                     month, year, date;
@@ -276,8 +278,8 @@ Meteor.methods({
                                 }
                                 //не вышло распарсить сообщение, нужно написать об ошибке и перейти к следующему
                                 if (!regexpResult) {
-                                    console.log("Cannot parse HEADER for message %s", prefix);
-                                    console.log(headers);
+                                    //console.log("Cannot parse HEADER for message %s", prefix);
+                                    //console.log(headers);
                                     return false;
                                 }
                                 regexpResult = regExps.body.exec(buffer);
@@ -285,26 +287,22 @@ Meteor.methods({
                                     //повторим то же, но с другой регуляркой.
                                     regexpResult = regExps.body2.exec(buffer);
                                 }
-                                if (!regexpResult) {
+                                /*if (!regexpResult) {
                                     //повторим то же, но  регуляркой без почты, а почту постараемся найти руками
                                     regexpResult = regExps.body3.exec(buffer);
-                                }
+                                }*/
                                 if (!regexpResult) {
-                                    console.log("Cannot parse BODY for message %s", prefix);
-                                    console.log(buffer);
+                                    //console.log("Cannot parse BODY for message %s", prefix);
+                                    //console.log(buffer);
                                     return false;
                                 }
                                 senderEmail = regexpResult[1];
-                                console.log("No user with email %s", senderEmail);
+                                //console.log("No user with email %s", senderEmail);
                                 Meteor.call('adm_userAdd', {
                                     email: senderEmail,
                                     password: Meteor.call('passwordGenerate'),
                                     flatNumber: flatNumber
                                 }, function (error, userId) {
-                                    if (!userId) {
-                                        console.log("-----!!!! ERR NO USER_ID!");
-                                        Meteor._sleepForMs(5000);
-                                    }
                                     countersValues = {
                                         userId: userId,
                                         month: month,
@@ -313,21 +311,7 @@ Meteor.methods({
                                         coldwater2: parseFloat(regexpResult[3].replace(',', '.')) || 0,
                                         hotwater1: parseFloat(regexpResult[4].replace(',', '.')) || 0,
                                         hotwater2: parseFloat(regexpResult[5].replace(',', '.')) || 0,
-                                        electricity: parseFloat(regexpResult[6].replace(',', '.')) || null,
-                                        electricity_direct: regExps.isElectricityDirect.test(regexpResult[7]),
-                                        comment: regexpResult[7],
-                                        createdAt: new Date(headers.date[0])
-                                    };
-
-                                    countersValues = {
-                                        userId: userId,
-                                        month: month,
-                                        year: year,
-                                        coldwater1: regexpResult[2],
-                                        coldwater2: regexpResult[3],
-                                        hotwater1: regexpResult[4],
-                                        hotwater2: regexpResult[5],
-                                        electricity: regexpResult[6],
+                                        electricity: parseFloat(regexpResult[6].replace(',', '.')) || 0,
                                         electricity_direct: regExps.isElectricityDirect.test(regexpResult[7]),
                                         comment: regexpResult[7],
                                         createdAt: new Date(headers.date[0])
@@ -335,7 +319,10 @@ Meteor.methods({
 
                                     var addCountersResult = Meteor.call('rowAdd', countersValues, function (error, result) {
                                         if (error) {
-                                            console.log(countersValues);
+                                            //console.log("Counters adding error, values are:")
+                                            //console.log("Error", error);
+                                            //console.log("Values are:");
+                                            //console.log(countersValues);
                                         }
                                     });
                                     if (addCountersResult) {

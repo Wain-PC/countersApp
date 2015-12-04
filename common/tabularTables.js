@@ -59,11 +59,11 @@ TabularTables.Users = new Tabular.Table({
     name: "Users",
     collection: Meteor.users,
     columns: [
-        {data: "_id", title: "ID", tmpl: Meteor.isClient && Template.adminUserlistUserViewLink},
+        {data: "emails[0].address", title: "E-mail", tmpl: Meteor.isClient && Template.adminUserlistUserViewLink},
         {data: "flatNumber", title: "№ квартиры"},
-        {data: "emails[0].address", title: "E-mail"},
         {data: "roles", title: "Администратор", tmpl: Meteor.isClient && Template.adminUserlistCheckbox}
     ],
+    extraFields: ['_id'],
     selector: function( userId ) {
         if(Roles.userIsInRole(userId,'admin')) {
             return {};
