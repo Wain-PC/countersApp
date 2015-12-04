@@ -5,9 +5,9 @@ Meteor.methods({
         var userId = this.userId,
             existingRow,
             tomorrowDate, thenDate,
-            isAdmin = Roles.userIsInRole(userId,'admin');
+            isAdmin = Roles.userIsInRole(userId, 'admin');
 
-        if(!isAdmin) {
+        if (!isAdmin) {
             doc.userId = userId;
         }
         //проверим, что этот пользователь уже загружал показания на сервер.
@@ -15,7 +15,8 @@ Meteor.methods({
         //если это так, нужно определить, доступна ли ему возможность редактирования показаний
         //в случае, если за эту дату показания еще не загружались, загрузим их
         if (!existingRow) {
-            Rows.insert(doc);
+            console.log({$push: doc});
+            Meteor.users.update({_id: userId}, {$push: doc});
             notifyClient({
                 type: 'success',
                 title: 'Показания успешно добавлены!'
@@ -59,7 +60,7 @@ Meteor.methods({
         check(rowId, String);
         var existingRow,
             tomorrowDate, thenDate,
-            isAdmin = Roles.userIsInRole(userId,'admin'),
+            isAdmin = Roles.userIsInRole(userId, 'admin'),
             updDoc = doc.$set;
 
         //проверим, что этот пользователь уже загружал показания на сервер.
@@ -80,7 +81,13 @@ Meteor.methods({
         tomorrowDate = thenDate;
         tomorrowDate.setDate(thenDate.getDate() + 1);
         if (+tomorrowDate > +thenDate || isAdmin) {
-            var updateResult = Rows.update({userId: updDoc.userId, month: updDoc.month, year: updDoc.year}, doc);
+            var updateResult = Meteor.users.update({
+                _id: updDoc.userId,
+                "rows.month": updDoc.month,
+                "rows.year": updDoc.year
+            }, {
+                $set: {"rows.$": updDoc}
+            });
             if (updateResult) {
                 notifyClient({
                     type: 'info',
@@ -110,11 +117,16 @@ Meteor.methods({
 
     'checkExistingRow': function (doc) {
         check(doc, Schemas.Row);
-        return Rows.findOne({userId: doc.userId, month: doc.month, year: doc.year});
-    },
-
-    'rowsList': function () {
-        return Rows.find({userId: this.userId});
+        var checkRow = Meteor.users.aggregate([
+            {
+                "$match": {_id: doc.userId, "rows.month": doc.month, "rows.year": doc.year}
+            },
+            {
+                "$unwind": "$rows"
+            }
+        ]);
+        console.log(checkRow);
+        return checkRow.length? checkRow[0] : false;
     },
 
     'passwordGenerate': function () {
@@ -288,9 +300,9 @@ Meteor.methods({
                                     regexpResult = regExps.body2.exec(buffer);
                                 }
                                 /*if (!regexpResult) {
-                                    //повторим то же, но  регуляркой без почты, а почту постараемся найти руками
-                                    regexpResult = regExps.body3.exec(buffer);
-                                }*/
+                                 //повторим то же, но  регуляркой без почты, а почту постараемся найти руками
+                                 regexpResult = regExps.body3.exec(buffer);
+                                 }*/
                                 if (!regexpResult) {
                                     //console.log("Cannot parse BODY for message %s", prefix);
                                     //console.log(buffer);

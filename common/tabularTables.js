@@ -2,34 +2,27 @@ TabularTables = {};
 Meteor.isClient && Template.registerHelper('TabularTables', TabularTables);
 TabularTables.Rows = new Tabular.Table({
     name: "Rows",
-    collection: Rows,
+    collection: Meteor.users,
     columns: [
         {
-            data: "month",
+            data: "rows.month",
             title: "Период показаний",
             tmpl: Meteor.isClient && Template.rowItemPeriod
 
         },
-        {data: "coldwater1", title: "ХВС1"},
-        {data: "coldwater2", title: "ХВС2"},
-        {data: "hotwater1", title: "ГВС1"},
-        {data: "hotwater2", title: "ГВС2"},
-        {data: "heat", title: "Тепло"},
-        {data: "electricity", title: "Электричество"},
+        {data: "rows", title: "ХВС1"},
+        {data: "rows.coldwater2", title: "ХВС2"},
+        {data: "rows.hotwater1", title: "ГВС1"},
+        {data: "rows.hotwater2", title: "ГВС2"},
+        {data: "rows.heat", title: "Тепло"},
+        {data: "rows.electricity", title: "Электричество"},
         {
-            data: 'electricity_direct',
+            data: 'rows.electricity_direct',
             title: "Прямой договор",
             tmpl: Meteor.isClient && Template.rowItemCheckbox
         },
-        {data: "comment", title: "Комментарий"}
+        {data: "rows.comment", title: "Комментарий"}
     ],
-    extraFields: ['year'],
-    selector: function( userId ) {
-        if(Roles.userIsInRole(userId,'admin')) {
-            return {};
-        }
-        return { userId: userId }
-    },
     searchable: false,
     language: {
         "processing": "Подождите...",
